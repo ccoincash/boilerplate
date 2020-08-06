@@ -1,12 +1,18 @@
 {
   "name": "scrypt_boilerplate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "sCrypt project boilerplate",
   "main": "",
+  "engines": {
+    "node": ">=12.0.0"
+  },
   "scripts": {
     "test": "mocha -r ts-node/register tests/**/*scrypttest.*  --reporter spec --timeout 120000",
     "single-test": "mocha -r ts-node/register --reporter spec --timeout 120000",
-    "testnet": "node tests/testnet/demo.js"
+    "testnet": "node tests/testnet/demo.js",
+    "pretest": "npm run compile-all",
+    "compile-single": "node tests/fixture/autoCompile.js --single",
+    "compile-all": "node tests/fixture/autoCompile.js"
   },
   "repository": {
     "type": "git",
@@ -21,14 +27,15 @@
   ],
   "author": "sCrypt Inc",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "axios": "^0.19.2"
+  },
   "devDependencies": {
     "@types/chai": "^4.2.8",
     "@types/mocha": "^7.0.1",
     "@types/node": "^13.7.6",
     "chai": "^4.2.0",
     "mocha": "^7.0.1",
-    "scrypttest": "^0.1.34",
     "ts-node": "^8.6.2",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^3.7.5"
