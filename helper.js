@@ -41,6 +41,50 @@ function reverseEndian(hexStr) {
   return buf.toString('hex').match(/.{2}/g).reverse().join('')
 }
 
+async function createRBUnlockTx(txid, address) {
+  const tx = new bsv.Transaction()
+  let {
+    data: utxo
+  } = await axios.get(`${API_PREFIX}/tx/hash/<hash>`)
+  let input = new bsv.Transaction.Input({
+    txId: utxo.txid,
+    outputIndex: 0,
+    script: new bsv.Script(),
+  })
+  let inputAmount = utxo.vout[0].value * 100000000
+  tx.addInput(input, bsv.Script.fromASM(utxo.vout[0].scriptPubKey.asm), inputAmount)
+
+  tx.addOutput(new bsv.Transaction.Output({
+    script: bsv.Script.fromASM(outputLockingScriptASM || inputLockingScriptASM),
+    satoshis: outputAmount,
+  }))
+
+  tx.fee(inputAmount - outputAmount)
+
+  return tx
+  // step 1: fetch utxo
+  let {
+    data: utxo
+  } = await axios.get(`${API_PREFIX}/tx/hash/<hash>`)
+  utxo = {
+    txId: utxo.txid,
+    outputIndex: 0,
+    satoshis: utxo.vout[0].value * 100000000,
+    script: utxo.vout[0].scriptPubKey.hex, 
+  }
+  console.log('utxo:', utxo)
+
+  //let input = 
+
+  // step 2: build the tx
+  const tx = new bsv.Transaction()
+  
+  tx.addOutput(new bsv.Transaction.Output({
+    script: new bsv.Script(), // place holder
+    satoshis: amountInContract,
+  }))
+}
+
 async function createLockingTx(address, amountInContract, fee) {
   // step 1: fetch utxos
   let {

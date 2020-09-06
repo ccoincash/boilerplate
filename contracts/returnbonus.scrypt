@@ -1,0 +1,13 @@
+import "util.scrypt";
+
+contract ReturnBonus {
+	bytes hashOutput;
+
+	public function unlock(bytes txPreimage) {
+        require(Tx.checkPreimage(txPreimage));
+
+		int len = length(txPreimage);
+		bytes hashOutput = txPreimage[len - 40 : len - 8];
+		require(hashOutput == this.hashOutput);
+    }
+}
