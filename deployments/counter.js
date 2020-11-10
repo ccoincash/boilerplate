@@ -1,4 +1,4 @@
-const { bsv, buildContractClass, getPreimage, toHex, num2bin, Bytes } = require('scryptlib');
+const { bsv, buildContractClass, getPreimage, toHex, num2bin, SigHashPreimage } = require('scryptlib');
 const { DataLen, loadDesc, createUnlockingTx, createLockingTx, sendTx, showError  } = require('../helper');
 
 (async() => {
@@ -6,7 +6,7 @@ const { DataLen, loadDesc, createUnlockingTx, createLockingTx, sendTx, showError
         const Counter = buildContractClass(loadDesc('counter_desc.json'))
         const counter = new Counter()
         // append state as op_return data
-        counter.dataLoad = num2bin(0, DataLen)
+        counter.setDataPart(num2bin(0, DataLen))
         
         let amount = 10000
         const FEE = amount / 10
@@ -23,14 +23,14 @@ const { DataLen, loadDesc, createUnlockingTx, createLockingTx, sendTx, showError
             let prevLockingScript = counter.lockingScript.toASM();
             
             // update state
-            counter.dataLoad = num2bin(i + 1, DataLen)
+            counter.setDataPart(num2bin(i + 1, DataLen))
             const newLockingScript = counter.lockingScript.toASM();
             const newAmount = amount - FEE
 
             const unlockingTx = await createUnlockingTx(lockingTxid, amount, prevLockingScript, newAmount, newLockingScript)
 
             const preimage = getPreimage(unlockingTx, prevLockingScript, amount)
-            const unlockingScript = counter.increment(new Bytes(toHex(preimage)), newAmount).toScript()
+            const unlockingScript = counter.increment(new SigHashPreimage(toHex(preimage)), newAmount).toScript()
             unlockingTx.inputs[0].setScript(unlockingScript)
 
             lockingTxid = await sendTx(unlockingTx)

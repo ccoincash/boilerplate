@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { bsv, buildContractClass, signTx, toHex, getPreimage, num2bin, PubKey, Bytes, Sig } = require('scryptlib');
+const { bsv, buildContractClass, signTx, toHex, getPreimage, num2bin, PubKey, SigHashPreimage, Sig } = require('scryptlib');
 const { inputIndex, inputSatoshis, tx, compileContract, DataLen, dummyTxId } = require('../../helper');
 
 // make a copy since it will be mutated
@@ -26,7 +26,7 @@ describe('Test sCrypt contract Non-Fungible Token In Javascript', () => {
   });
 
   it('should succeed when one new token is issued', () => {
-    token.dataLoad = num2bin(currTokenId, DataLen) + toHex(issuer)
+    token.setDataPart(num2bin(currTokenId, DataLen) + toHex(issuer))
     
     const testIssue = (privKey, receiver, newIssuer = issuer, nextTokenId = currTokenId + 1, issuedTokenId = currTokenId) => {
       tx_ = new bsv.Transaction()
@@ -37,17 +37,19 @@ describe('Test sCrypt contract Non-Fungible Token In Javascript', () => {
         script: ''
       }), bsv.Script.fromASM(token.lockingScript.toASM()), inputSatoshis)
 
-      const newLockingScript0 = lockingScriptCodePart + ' OP_RETURN ' + num2bin(nextTokenId, DataLen) + toHex(newIssuer)
+      const newLockingScript0 = [lockingScriptCodePart, num2bin(nextTokenId, DataLen) + toHex(newIssuer)].join(' ')
       tx_.addOutput(new bsv.Transaction.Output({
         script: bsv.Script.fromASM(newLockingScript0),
         satoshis: outputAmount
       }))
 
-      const newLockingScript1 = lockingScriptCodePart + ' OP_RETURN ' + num2bin(issuedTokenId, DataLen) + toHex(receiver)
+      const newLockingScript1 = [lockingScriptCodePart, num2bin(issuedTokenId, DataLen) + toHex(receiver)].join(' ')
       tx_.addOutput(new bsv.Transaction.Output({
         script: bsv.Script.fromASM(newLockingScript1),
         satoshis: outputAmount
       }))
+      
+      token.txContext = { tx: tx_, inputIndex, inputSatoshis }
 
       const preimage = getPreimage(tx_, token.lockingScript.toASM(), inputSatoshis, inputIndex)
       const sig = signTx(tx_, privKey, token.lockingScript.toASM(), inputSatoshis)
@@ -56,32 +58,32 @@ describe('Test sCrypt contract Non-Fungible Token In Javascript', () => {
         new PubKey(toHex(publicKey2)),
         outputAmount,
         outputAmount,
-        new Bytes(toHex(preimage))
+        new SigHashPreimage(toHex(preimage))
       )
     }
 
-    result = testIssue(privateKey1, publicKey2, publicKey1, currTokenId + 1, currTokenId).verify({ tx: tx_, inputIndex, inputSatoshis })
+    result = testIssue(privateKey1, publicKey2, publicKey1, currTokenId + 1, currTokenId).verify()
     expect(result.success, result.error).to.be.true
 
     // issuer must not change
-    result = testIssue(privateKey1, publicKey2, publicKey2, currTokenId + 1, currTokenId).verify({ tx: tx_, inputIndex, inputSatoshis })
+    result = testIssue(privateKey1, publicKey2, publicKey2, currTokenId + 1, currTokenId).verify()
     expect(result.success, result.error).to.be.false
     
     // unauthorized key
-    result = testIssue(privateKey2, publicKey2, publicKey1, currTokenId + 1, currTokenId).verify({ tx: tx_, inputIndex, inputSatoshis })
+    result = testIssue(privateKey2, publicKey2, publicKey1, currTokenId + 1, currTokenId).verify()
     expect(result.success, result.error).to.be.false
     
     // mismatched next token ID
-    result = testIssue(privateKey1, publicKey2, publicKey1, currTokenId + 2, currTokenId).verify({ tx: tx_, inputIndex, inputSatoshis })
+    result = testIssue(privateKey1, publicKey2, publicKey1, currTokenId + 2, currTokenId).verify()
     expect(result.success, result.error).to.be.false
     
     // mismatched issued token ID
-    result = testIssue(privateKey1, publicKey2, publicKey1, currTokenId + 1, currTokenId - 1).verify({ tx: tx_, inputIndex, inputSatoshis })
+    result = testIssue(privateKey1, publicKey2, publicKey1, currTokenId + 1, currTokenId - 1).verify()
     expect(result.success, result.error).to.be.false
   });
 
   it('should succeed when a token is transferred', () => {
-    token.dataLoad = num2bin(currTokenId, DataLen) + toHex(sender)
+    token.setDataPart(num2bin(currTokenId, DataLen) + toHex(sender))
     
     const testTransfer = (privKey, receiver, receivedTokenId = currTokenId) => {
       tx_ = new bsv.Transaction()
@@ -92,11 +94,13 @@ describe('Test sCrypt contract Non-Fungible Token In Javascript', () => {
         script: ''
       }), bsv.Script.fromASM(token.lockingScript.toASM()), inputSatoshis)
 
-      const newLockingScript0 = lockingScriptCodePart + ' OP_RETURN ' + num2bin(receivedTokenId, DataLen) + toHex(receiver)
+      const newLockingScript0 = [lockingScriptCodePart, num2bin(receivedTokenId, DataLen) + toHex(receiver)].join(' ')
       tx_.addOutput(new bsv.Transaction.Output({
         script: bsv.Script.fromASM(newLockingScript0),
         satoshis: outputAmount
       }))
+
+      token.txContext = { tx: tx_, inputIndex, inputSatoshis }
 
       const preimage = getPreimage(tx_, token.lockingScript.toASM(), inputSatoshis, inputIndex)
       const sig = signTx(tx_, privKey, token.lockingScript.toASM(), inputSatoshis)
@@ -104,24 +108,24 @@ describe('Test sCrypt contract Non-Fungible Token In Javascript', () => {
         new Sig(toHex(sig)),
         new PubKey(toHex(publicKey2)),
         outputAmount,
-        new Bytes(toHex(preimage))
+        new SigHashPreimage(toHex(preimage))
       )
     }
 
-    result = testTransfer(privateKey1, publicKey2, currTokenId).verify({ tx: tx_, inputIndex, inputSatoshis })
+    result = testTransfer(privateKey1, publicKey2, currTokenId).verify()
     expect(result.success, result.error).to.be.true
     
     // unauthorized key
-    result = testTransfer(privateKey2, publicKey2, currTokenId).verify({ tx: tx_, inputIndex, inputSatoshis })
+    result = testTransfer(privateKey2, publicKey2, currTokenId).verify()
     expect(result.success, result.error).to.be.false
 
     // token ID must not change
-    result = testTransfer(privateKey1, publicKey2, currTokenId + 2).verify({ tx: tx_, inputIndex, inputSatoshis })
+    result = testTransfer(privateKey1, publicKey2, currTokenId + 2).verify()
     expect(result.success, result.error).to.be.false
   });
 
   it('should fail if receiver is the isssuer when a new token is issued, so issuer can not double mint', () => {
-    token.dataLoad = num2bin(currTokenId, DataLen) + toHex(issuer)
+    token.setDataPart(num2bin(currTokenId, DataLen) + toHex(issuer))
     
     const testIssue = (privKey, receiver, newIssuer = issuer, nextTokenId = currTokenId + 1, issuedTokenId = currTokenId) => {
       tx_ = new bsv.Transaction()
@@ -132,17 +136,20 @@ describe('Test sCrypt contract Non-Fungible Token In Javascript', () => {
         script: ''
       }), bsv.Script.fromASM(token.lockingScript.toASM()), inputSatoshis)
 
-      const newLockingScript0 = lockingScriptCodePart + ' OP_RETURN ' + num2bin(nextTokenId, DataLen) + toHex(newIssuer)
+      const newLockingScript0 = [lockingScriptCodePart, num2bin(nextTokenId, DataLen) + toHex(newIssuer)].join(' ')
       tx_.addOutput(new bsv.Transaction.Output({
         script: bsv.Script.fromASM(newLockingScript0),
         satoshis: outputAmount
       }))
 
-      const newLockingScript1 = lockingScriptCodePart + ' OP_RETURN ' + num2bin(issuedTokenId, DataLen) + toHex(issuer) // set token receiver to be issuer
+       // set token receiver to be issuer
+      const newLockingScript1 = [lockingScriptCodePart, num2bin(issuedTokenId, DataLen) + toHex(issuer)].join(' ')
       tx_.addOutput(new bsv.Transaction.Output({
         script: bsv.Script.fromASM(newLockingScript1),
         satoshis: outputAmount
       }))
+
+      token.txContext = { tx: tx_, inputIndex, inputSatoshis }
 
       const preimage = getPreimage(tx_, token.lockingScript.toASM(), inputSatoshis, inputIndex)
       const sig = signTx(tx_, privKey, token.lockingScript.toASM(), inputSatoshis)
@@ -151,11 +158,11 @@ describe('Test sCrypt contract Non-Fungible Token In Javascript', () => {
         new PubKey(toHex(publicKey2)),
         outputAmount,
         outputAmount,
-        new Bytes(toHex(preimage))
+        new SigHashPreimage(toHex(preimage))
       )
     }
 
-    result = testIssue(privateKey1, publicKey2, publicKey1, currTokenId + 1, currTokenId).verify({ tx: tx_, inputIndex, inputSatoshis })
+    result = testIssue(privateKey1, publicKey2, publicKey1, currTokenId + 1, currTokenId).verify()
     expect(result.success, result.error).to.be.false
   })
 });

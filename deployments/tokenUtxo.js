@@ -7,6 +7,7 @@ const {
   Bytes,
   signTx,
   PubKey,
+  SigHashPreimage,
   Sig
 } = require('scryptlib');
 const {
@@ -35,7 +36,7 @@ const {
 
     // append state as passive data part
     // initial token supply 100: publicKey1 has 100, publicKey2 0
-    token.dataLoad = toHex(publicKey1) + num2bin(10, DataLen) + num2bin(90, DataLen)
+    token.setDataPart(toHex(publicKey1) + num2bin(10, DataLen) + num2bin(90, DataLen))
 
     let inputSatoshis = 10000
     const FEE = inputSatoshis / 4
@@ -58,12 +59,12 @@ const {
         script: ''
       }), token.lockingScript, inputSatoshis)
 
-      lockingScript0 = token.codePart.toASM() + ' OP_RETURN ' + toHex(publicKey2) + num2bin(0, DataLen) + num2bin(70, DataLen)
+      lockingScript0 = [token.codePart.toASM(), toHex(publicKey2) + num2bin(0, DataLen) + num2bin(70, DataLen)].join(' ')
       tx.addOutput(new bsv.Transaction.Output({
         script: bsv.Script.fromASM(lockingScript0),
         satoshis: outputAmount
       }))
-      lockingScript1 = token.codePart.toASM() + ' OP_RETURN ' + toHex(publicKey3) + num2bin(0, DataLen) + num2bin(30, DataLen)
+      lockingScript1 = [token.codePart.toASM(), toHex(publicKey3) + num2bin(0, DataLen) + num2bin(30, DataLen)].join(' ')
       tx.addOutput(new bsv.Transaction.Output({
         script: bsv.Script.fromASM(lockingScript1),
         satoshis: outputAmount
@@ -79,7 +80,7 @@ const {
         new PubKey(toHex(publicKey3)),
         30,
         outputAmount,
-        new Bytes(toHex(preimage))
+        new SigHashPreimage(toHex(preimage))
       ).toScript()
       tx.inputs[0].setScript(unlockingScript);
       splitTxid = await sendTx(tx);
@@ -103,7 +104,7 @@ const {
         script: ''
       }), bsv.Script.fromASM(lockingScript1), inputSatoshis)
 
-      const lockingScript2 = token.codePart.toASM() + ' OP_RETURN ' + toHex(publicKey1) + num2bin(70, DataLen) + num2bin(30, DataLen)
+      const lockingScript2 = [token.codePart.toASM(), toHex(publicKey1) + num2bin(70, DataLen) + num2bin(30, DataLen)].join(' ')
       tx.addOutput(new bsv.Transaction.Output({
         script: bsv.Script.fromASM(lockingScript2),
         satoshis: outputAmount
@@ -121,7 +122,7 @@ const {
           new Sig(toHex(sig2)),
           new PubKey(toHex(publicKey1)),
           new Bytes(prevouts), 30, outputAmount,
-          new Bytes(toHex(preimage))
+          new SigHashPreimage(toHex(preimage))
         ).toScript()
         tx.inputs[0].setScript(unlockingScript);
       }
@@ -134,7 +135,7 @@ const {
           new Sig(toHex(sig3)),
           new PubKey(toHex(publicKey1)),
           new Bytes(prevouts), 70, outputAmount,
-          new Bytes(toHex(preimage))
+          new SigHashPreimage(toHex(preimage))
         ).toScript()
         tx.inputs[1].setScript(unlockingScript);
       }

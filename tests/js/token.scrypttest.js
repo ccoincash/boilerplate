@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { bsv, buildContractClass, signTx, toHex, getPreimage, num2bin, Sig, PubKey, Bytes } = require('scryptlib');
+const { bsv, buildContractClass, signTx, toHex, getPreimage, num2bin, Sig, PubKey, SigHashPreimage } = require('scryptlib');
 const { inputIndex, inputSatoshis, tx, compileContract, DataLen } = require('../../helper');
 
 // make a copy since it will be mutated
@@ -20,10 +20,10 @@ describe('Test sCrypt contract Token In Javascript', () => {
     token = new Token()
 
     // initial supply 100 tokens: publicKey1 has 100, publicKey2 0
-    token.dataLoad = toHex(publicKey1) + num2bin(100, DataLen) + toHex(publicKey2) + num2bin(0, DataLen)
+    token.setDataPart(toHex(publicKey1) + num2bin(100, DataLen) + toHex(publicKey2) + num2bin(0, DataLen))
     
     getPreimageAfterTransfer = (balance1, balance2) => {
-      const newLockingScript = token.codePart.toASM() + ' OP_RETURN ' + toHex(publicKey1) + num2bin(balance1, DataLen) + toHex(publicKey2) + num2bin(balance2, DataLen)
+      const newLockingScript = [token.codePart.toASM(), toHex(publicKey1) + num2bin(balance1, DataLen) + toHex(publicKey2) + num2bin(balance2, DataLen)].join(' ')
       tx_.addOutput(new bsv.Transaction.Output({
         script: bsv.Script.fromASM(newLockingScript),
         satoshis: outputAmount
@@ -44,7 +44,7 @@ describe('Test sCrypt contract Token In Javascript', () => {
         new Sig(toHex(sig1)),
         new PubKey(toHex(publicKey2)),
         40,
-        new Bytes(toHex(preimage)),
+        new SigHashPreimage(toHex(preimage)),
         outputAmount
       ).verify()
     expect(result.success, result.error).to.be.true
@@ -59,7 +59,7 @@ describe('Test sCrypt contract Token In Javascript', () => {
           new Sig(toHex(sig1)),
           new PubKey(toHex(publicKey2)),
           40,
-          new Bytes(toHex(preimage)),
+          new SigHashPreimage(toHex(preimage)),
           outputAmount
         ).verify()
     expect(result.success, result.error).to.be.false
@@ -73,7 +73,7 @@ describe('Test sCrypt contract Token In Javascript', () => {
           new Sig(toHex(sig2)),
           new PubKey(toHex(publicKey1)),
           40,
-          new Bytes(toHex(preimage)),
+          new SigHashPreimage(toHex(preimage)),
           outputAmount
         ).verify()
     expect(result.success, result.error).to.be.false
@@ -87,7 +87,7 @@ describe('Test sCrypt contract Token In Javascript', () => {
           new Sig(toHex(sig2)),
           new PubKey(toHex(publicKey2)),
           40,
-          new Bytes(toHex(preimage)),
+          new SigHashPreimage(toHex(preimage)),
           outputAmount
         ).verify()
     expect(result.success, result.error).to.be.false

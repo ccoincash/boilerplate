@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { bsv, buildContractClass, getPreimage, toHex, num2bin, Bytes } = require('scryptlib');
+const { bsv, buildContractClass, getPreimage, toHex, num2bin, SigHashPreimage } = require('scryptlib');
 
 const {
   inputIndex,
@@ -20,10 +20,10 @@ describe('Test sCrypt contract Counter In Javascript', () => {
     const Counter = buildContractClass(compileContract('counter.scrypt'))
     counter = new Counter()
 
-    // set initial OP_RETURN value
-    counter.dataLoad = num2bin(0, DataLen)
+    // set initial counter value
+    counter.setDataPart(num2bin(0, DataLen))
 
-    const newLockingScript = counter.codePart.toASM() + ' OP_RETURN ' + num2bin(1, DataLen)
+    const newLockingScript = [counter.codePart.toASM(), num2bin(1, DataLen)].join(' ')
 
     tx_.addOutput(new bsv.Transaction.Output({
       script: bsv.Script.fromASM(newLockingScript),
@@ -41,17 +41,17 @@ describe('Test sCrypt contract Counter In Javascript', () => {
   });
 
   it('should succeed when pushing right preimage & amount', () => {
-    result = counter.increment(new Bytes(toHex(preimage)), outputAmount).verify()
+    result = counter.increment(new SigHashPreimage(toHex(preimage)), outputAmount).verify()
     expect(result.success, result.error).to.be.true
   });
 
   it('should fail when pushing wrong preimage', () => {
-    result = counter.increment(new Bytes(toHex(preimage) + '01'), outputAmount).verify()
+    result = counter.increment(new SigHashPreimage(toHex(preimage) + '01'), outputAmount).verify()
     expect(result.success, result.error).to.be.false
   });
 
   it('should fail when pushing wrong amount', () => {
-    result = counter.increment(new Bytes(toHex(preimage)), outputAmount - 1).verify()
+    result = counter.increment(new SigHashPreimage(toHex(preimage)), outputAmount - 1).verify()
     expect(result.success, result.error).to.be.false
   });
 });

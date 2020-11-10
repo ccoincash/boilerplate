@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { bsv, buildContractClass, toHex, getPreimage, num2bin, PubKey, Bytes } = require('scryptlib');
+const { bsv, buildContractClass, toHex, getPreimage, num2bin, PubKey, SigHashPreimage } = require('scryptlib');
 const { inputIndex, inputSatoshis, tx, compileContract, DataLen } = require('../../helper');
 
 // make a copy since it will be mutated
@@ -18,7 +18,7 @@ describe('Test sCrypt contract TokenSale In Javascript', () => {
     tokenSale = new TokenSale(tokenPriceInSatoshis)
 
     // initial empty state
-    tokenSale.dataLoad = ''
+    tokenSale.setDataPart('')
 
     getPreimageAfterPurchase = (publicKey) => {
       const newLockingScriptHex = tokenSale.lockingScript.toHex() + toHex(publicKey) + num2bin(numTokens, DataLen)
@@ -32,12 +32,14 @@ describe('Test sCrypt contract TokenSale In Javascript', () => {
   });
 
   it('should succeed when publicKey1 buys tokens', () => {
+    // any contract that includes checkSig() must be verified in a given context
+    const context = { tx: tx_, inputIndex, inputSatoshis }
     const preimage = getPreimageAfterPurchase(publicKey1)
     result = tokenSale.buy(
         new PubKey(toHex(publicKey1)),
         numTokens,
-        new Bytes(toHex(preimage))
-      ).verify( { tx: tx_, inputIndex, inputSatoshis })
+        new SigHashPreimage(toHex(preimage))
+      ).verify(context)
     expect(result.success, result.error).to.be.true
   });
 });

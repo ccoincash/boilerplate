@@ -4,7 +4,7 @@ const {
   getPreimage,
   toHex,
   num2bin,
-  Bytes,
+  SigHashPreimage,
   signTx,
   PubKey,
   Sig
@@ -33,7 +33,7 @@ const {
 
     // append state as passive data part
     // initial token supply 100: publicKey1 has 100, publicKey2 0
-    token.dataLoad = toHex(publicKey1) + num2bin(100, DataLen) + toHex(publicKey2) + num2bin(0, DataLen)
+    token.setDataPart(toHex(publicKey1) + num2bin(100, DataLen) + toHex(publicKey2) + num2bin(0, DataLen))
 
     let amount = 10000
     const FEE = amount / 10
@@ -50,7 +50,7 @@ const {
       const prevLockingScript = token.lockingScript
 
       // update data state
-      token.dataLoad = toHex(publicKey1) + num2bin(60, DataLen) + toHex(publicKey2) + num2bin(40, DataLen)
+      token.setDataPart(toHex(publicKey1) + num2bin(60, DataLen) + toHex(publicKey2) + num2bin(40, DataLen))
 
       const newLockingScriptASM = token.lockingScript.toASM()
       const newAmount = amount - FEE
@@ -65,7 +65,7 @@ const {
         new Sig(toHex(sig1)),
         new PubKey(toHex(publicKey2)),
         40,
-        new Bytes(toHex(preimage)),
+        new SigHashPreimage(toHex(preimage)),
         newAmount
       ).toScript()
 
@@ -83,7 +83,7 @@ const {
       const prevLockingScript = token.lockingScript
 
       // update data state
-      token.dataLoad = toHex(publicKey1) + num2bin(70, DataLen) + toHex(publicKey2) + num2bin(30, DataLen)
+      token.setDataPart(toHex(publicKey1) + num2bin(70, DataLen) + toHex(publicKey2) + num2bin(30, DataLen))
 
       const newLockingScriptASM = token.lockingScript.toASM()
       const newAmount = amount - FEE
@@ -98,7 +98,7 @@ const {
         new Sig(toHex(sig2)),
         new PubKey(toHex(publicKey1)),
         10,
-        new Bytes(toHex(preimage)),
+        new SigHashPreimage(toHex(preimage)),
         newAmount
       ).toScript()
 

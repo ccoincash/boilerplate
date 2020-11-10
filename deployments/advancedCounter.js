@@ -5,7 +5,7 @@ const {
   toHex,
   bsv,
   Ripemd160,
-  Bytes
+  SigHashPreimage
 } = require('scryptlib');
 const {
   loadDesc,
@@ -36,7 +36,7 @@ function sleep(ms) {
     const advCounter = new AdvancedCounter()
 
     // append state as passive data
-    advCounter.dataLoad = num2bin(0, DataLen)
+    advCounter.setDataPart(num2bin(0, DataLen))
 
     // initial contract funding
     let amount = 10000
@@ -60,7 +60,7 @@ function sleep(ms) {
       const prevLockingScript = advCounter.lockingScript
 
       // Set the state for the next transaction
-      advCounter.dataLoad = num2bin(i + 1, DataLen)
+      advCounter.setDataPart(num2bin(i + 1, DataLen))
 
       // keep the contract funding constant
       const newAmount = amount
@@ -83,16 +83,11 @@ function sleep(ms) {
       const preimage = getPreimage(unlockingTx, prevLockingScript.toASM(), amount, curInputIndex, sighashType)
 
       const unlockingScript = advCounter.increment(
-        new Bytes(toHex(preimage)),
+        new SigHashPreimage(toHex(preimage)),
         amount,
         new Ripemd160(toHex(pkh)),
         changeAmount
       ).toScript()
-      // .verify({
-      //   tx: unlockingTx,
-      //   inputIndex: curInputIndex,
-      //   inputSatoshis: amount
-      // }) 
 
       // unlock other p2pkh inputs
       for (let i = 0; i < curInputIndex; i++) {
