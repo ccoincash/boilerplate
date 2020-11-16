@@ -33,6 +33,11 @@ contract Util {
 		 		pubKeyHash + OpCode.OP_EQUALVERIFY + OpCode.OP_CHECKSIG;
 	}
 
+	// build P2PKH script from public key hash
+	static function buildPublicKeyScript(PubKey pubKey): bytes {
+	 	return  pack(Util.PubKeyLen) + pubKey + OpCode.OP_CHECKSIG;
+	}
+
 	// build a tx output from its script and satoshi amount
 	static function buildOutput(bytes outputScript, int outputSatoshis): bytes {
 		return num2bin(outputSatoshis, Util.OutputValueLen) + Util.writeVarint(outputScript);
